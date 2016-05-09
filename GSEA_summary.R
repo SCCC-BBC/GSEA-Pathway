@@ -173,17 +173,18 @@ if(length(comp.unique)<=1){
   
   hmcol<-rev(colorRampPalette(brewer.pal(10, "RdBu"))(5))
   lmat <- rbind( c(5,3,4), c(2,1,4) )
-  lhei <- c(1, 6)
+  lhei <- c(0.35, 6)
   lwid <- c(1, 6, 1)
   
-  pdf(file=paste0(out_dir,"/pathway_heatmap.pdf"), width=8, height=16)
+  
+  png(file=paste0(out_dir,"/pathway_heatmap.png"), width=nrow(Data.heatmap)*6, height=nrow(Data.heatmap)*12, res=190)
   par(mar=c(10,0,4,4))
   heatmap.2(as.matrix(Data.heatmap), col=hmcol, Colv = FALSE, dendrogram ="none",
             scale="none", trace="none", key = F, 
             lmat = lmat, lhei = lhei, lwid = lwid,
             # draw grid or not
             #sepwidth=c(0,0),sepcolor="black",colsep=1:ncol(Data.heatmap),rowsep=1:nrow(Data.heatmap),
-            cexRow = 0.2 + 1/log10(nrow(Data.heatmap)), margins=c(8,16), srtCol=45,
+            cexRow = 0.2 + 1/log10(nrow(Data.heatmap)), margins=c(14,16), srtCol=45,
             main="Gene set enrichment map")
   par(lend=2)           # square line ends for the color legend
   legend("topright",      # location of the legend on the heatmap plot
