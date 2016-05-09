@@ -16,11 +16,12 @@ if("--help" %in% args) {
       --indir=somevalue   - character, input directory containing all .cls, .gct files 
       --outdir=indir  - character, output directory
       --pathway_type=CP - character, 'BP' or 'CP'
+      --prerank=FALSE - logic, indicate whether the type of analysis is preranked
       --permute_method=gene_set  - character, either 'gene_set' , 'phenotype'
       --help              - print this text
  
       Example:
-      Rscript GSEA_batch.R --indir=/home/jamesban/Desktop/Projects/Yuqi --outdir=/home/jamesban/Desktop/Projects/Yuqi/GSEA --pathway_type=CP --permute_method=gene_set
+      Rscript GSEA_batch.R --indir=/home/jamesban/Desktop/Projects/Yuqi --outdir=/home/jamesban/Desktop/Projects/Yuqi/GSEA --pathway_type=CP --prerank=FALSE --permute_method=gene_set
 
       Output:
 	GSEA results
@@ -53,6 +54,13 @@ if(is.null(argsL$pathway_type)) {
 	stop("Do not regonize the parameter pathway_type, use --help to view usage example", call.=F)
 }
 
+if(is.null(argsL$prerank)){
+	cat("Default analysis input is .cls file.\n")
+	argsL$prerank = FALSE
+}else{
+	Prerank = (argsL$prerank=="TRUE")
+}
+
 if(is.null(argsL$permute_method)) {
 	cat("Default permute method: gene_set for GSEA\n")
 	p_method = "gene_set"
@@ -74,18 +82,26 @@ if(is.null(argsL$outdir)) {
 #dir for cls and gct files
 gsea_indir = argsL$indir # "/Users/aiminyan/Desktop/Project/McCarthy/GSEA/"
 
-filename_prefix = gsub(".gct", "", grep(".gct", dir(gsea_indir),value = T))
+if(!Prerank){
+	filename_prefix = gsub(".gct", "", grep(".gct", dir(gsea_indir),value = T))
 
 # 
-gct.files = paste0(gsea_indir, filename_prefix, ".gct")
-cls.files = paste0(gsea_indir, filename_prefix, ".cls")
-
+	gct.files = paste0(gsea_indir,"/", filename_prefix, ".gct")
+	cls.files = paste0(gsea_indir,"/", filename_prefix, ".cls")
+}else{
+        filename_prefix = gsub(".rnk", "", grep(".rnk", dir(gsea_indir), value = T))
+	rnk.files = paste0(gsea_indir,"/", filename_prefix, ".rnk")
+}
 dir.create(out_dir, showWarnings = FALSE)
 
 #code lines
-command_line = paste0("java -Xmx4096m -cp /home/jamesban/Softwares/gsea2-2.2.2.jar xtools.gsea.Gsea -res ", gct.files, " -cls ", cls.files, "#high_versus_low -gmx ", gmt_file, " -collapse false -mode Max_probe -norm meandiv -nperm 10000 -permute ", p_method, " -rnd_type no_balance -scoring_scheme weighted -rpt_label ", filename_prefix, "_",p_type, " -metric Signal2Noise -sort real -order descending -include_only_symbols true -make_sets true -median false -num 100 -plot_top_x 40 -rnd_seed timestamp -save_rnd_lists false -set_max 500 -set_min 10 -zip_report false -out ", out_dir, " -gui false","\n")
+if(!Prerank){
+	command_line = paste0("java -Xmx4096m -cp /home/jamesban/Softwares/gsea2-2.2.2.jar xtools.gsea.Gsea -res ", gct.files, " -cls ", cls.files, "#high_versus_low -gmx ", gmt_file, " -collapse false -mode Max_probe -norm meandiv -nperm 10000 -permute ", p_method, " -rnd_type no_balance -scoring_scheme weighted -rpt_label ", filename_prefix, "_",p_type, " -metric Signal2Noise -sort real -order descending -include_only_symbols true -make_sets true -median false -num 100 -plot_top_x 40 -rnd_seed timestamp -save_rnd_lists false -set_max 500 -set_min 10 -zip_report false -out ", out_dir, " -gui false","\n")
+}else{
+	command_line = paste0("java -Xmx4096m -cp /home/jamesban/Softwares/gsea2-2.2.2.jar xtools.gsea.GseaPreranked -rnk ", rnk.files, " -gmx ", gmt_file, " -collapse false -mode Max_probe -norm meandiv -nperm 10000 -scoring_scheme weighted -rpt_label ", filename_prefix, "_",p_type, " -include_only_symbols true -make_sets true -plot_top_x 40 -rnd_seed timestamp -set_max 500 -set_min 10 -zip_report false -out ", out_dir, " -gui false","\n")
+}
 
-write.table("", paste0(gsea_indir, "command_gsea.txt"), append=F, row.names=FALSE,col.name=FALSE, quote=FALSE)
+write.table("#!/bin/bash\n", paste0(gsea_indir, "/command_gsea.txt"), append=F, row.names=FALSE,col.name=FALSE, quote=FALSE)
 for(i in 1:length(command_line)){
-  write.table(command_line[i], paste0(gsea_indir, "command_gsea.txt"), append=T, row.names=FALSE,col.name=FALSE, quote=FALSE)
+  write.table(command_line[i], paste0(gsea_indir, "/command_gsea.txt"), append=T, row.names=FALSE,col.name=FALSE, quote=FALSE)
 }
